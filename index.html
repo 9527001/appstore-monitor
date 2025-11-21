@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="App Store 应用上线监控工具">
+    <title>App Store 应用上线监控</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📱 App Store 应用上线监控</h1>
+            <p class="subtitle">实时监控应用在 App Store 的上线状态</p>
+        </header>
+
+        <div class="config-panel">
+            <h2>配置参数</h2>
+            <div class="form-group">
+                <label for="appId">应用ID (App ID):</label>
+                <input type="text" id="appId" placeholder="例如: 1514564893" value="1514564893">
+                <small>在 App Store 链接中找到，如: apps.apple.com/app/id<span style="color: #007AFF;">1514564893</span></small>
+            </div>
+
+            <div class="form-group">
+                <label for="country">国家/地区:</label>
+                <select id="country">
+                    <option value="cn" selected>中国 (cn)</option>
+                    <option value="us">美国 (us)</option>
+                    <option value="jp">日本 (jp)</option>
+                    <option value="kr">韩国 (kr)</option>
+                    <option value="gb">英国 (gb)</option>
+                    <option value="au">澳大利亚 (au)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="startTime">开始时间:</label>
+                <input type="datetime-local" id="startTime">
+                <small>设置监控开始的时间（可选，留空则立即开始）</small>
+            </div>
+
+            <div class="form-group">
+                <label for="frequency">请求频率 (秒):</label>
+                <input type="number" id="frequency" min="10" max="3600" value="60" step="10">
+                <small>每多少秒查询一次（最小10秒，最大3600秒）</small>
+            </div>
+
+            <div class="button-group">
+                <button id="startBtn" class="btn btn-primary">开始监控</button>
+                <button id="stopBtn" class="btn btn-secondary" disabled>停止监控</button>
+                <button id="clearBtn" class="btn btn-outline">清空记录</button>
+            </div>
+        </div>
+
+        <div class="status-panel">
+            <h2>监控状态</h2>
+            <div id="statusInfo" class="status-info">
+                <div class="status-item">
+                    <span class="label">状态:</span>
+                    <span id="status" class="value">未开始</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">下次查询:</span>
+                    <span id="nextCheck" class="value">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">查询次数:</span>
+                    <span id="queryCount" class="value">0</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">上线状态:</span>
+                    <span id="availabilityStatus" class="value">-</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="result-panel">
+            <h2>查询记录</h2>
+            <div id="resultList" class="result-list">
+                <div class="empty-state">暂无查询记录</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
