@@ -125,62 +125,150 @@
 
     <script>
         // 加载并渲染 README.md
-        function loadReadme() {
-            const xhr = new XMLHttpRequest();
-            xhr.open('GET', 'README.md', true);
-            xhr.onreadystatechange = function() {
-                if (xhr.readyState === 4) {
-                    if (xhr.status === 200 || xhr.status === 0) {
-                        // 使用 marked.js 将 markdown 转换为 HTML
-                        const html = marked.parse(xhr.responseText);
-                        document.getElementById('helpContent').innerHTML = html;
-                    } else {
-                        // 尝试使用 fetch（适用于服务器环境）
-                        fetch('README.md')
-                            .then(response => {
-                                if (!response.ok) throw new Error('Network response was not ok');
-                                return response.text();
-                            })
-                            .then(text => {
-                                const html = marked.parse(text);
-                                document.getElementById('helpContent').innerHTML = html;
-                            })
-                            .catch(error => {
-                                document.getElementById('helpContent').innerHTML = 
-                                    '<div style="color: #dc3545; padding: 20px;">' +
-                                    '<h3>加载文档失败</h3>' +
-                                    '<p>请确保 README.md 文件与 help.html 在同一目录下。</p>' +
-                                    '<p>如果是在本地打开，建议使用本地服务器运行（如使用 Python: <code>python -m http.server</code>）</p>' +
-                                    '</div>';
-                                console.error('加载文档失败:', error);
-                            });
-                    }
+        async function loadReadme() {
+            const helpContent = document.getElementById('helpContent');
+            
+            // 检测是否是本地文件系统访问
+            const isLocalFile = window.location.protocol === 'file:';
+            
+            // 尝试多种方式加载 README.md
+            let markdownText = null;
+            let lastError = null;
+            
+            // 获取当前页面的基础路径（兼容 GitLab Pages 和 GitHub Pages）
+            const getBasePath = () => {
+                const path = window.location.pathname;
+                // 如果是 GitLab Pages，路径可能是 /project-name/help.html
+                // 如果是 GitHub Pages，路径可能是 /project-name/help.html 或 /help.html
+                const pathParts = path.split('/').filter(p => p); // 移除空字符串
+                // 移除文件名，保留目录路径
+                if (pathParts.length > 0 && pathParts[pathParts.length - 1].endsWith('.html')) {
+                    pathParts.pop(); // 移除 help.html
                 }
+                const basePath = pathParts.length > 0 ? '/' + pathParts.join('/') + '/' : './';
+                return basePath;
             };
-            xhr.onerror = function() {
-                // 如果 XMLHttpRequest 失败，尝试使用 fetch
-                fetch('README.md')
-                    .then(response => {
-                        if (!response.ok) throw new Error('Network response was not ok');
-                        return response.text();
-                    })
-                    .then(text => {
-                        const html = marked.parse(text);
-                        document.getElementById('helpContent').innerHTML = html;
-                    })
-                    .catch(error => {
-                        document.getElementById('helpContent').innerHTML = 
-                            '<div style="color: #dc3545; padding: 20px;">' +
-                            '<h3>加载文档失败</h3>' +
-                            '<p>请确保 README.md 文件与 help.html 在同一目录下。</p>' +
-                            '<p>如果是在本地打开，建议使用本地服务器运行：</p>' +
-                            '<pre><code># 使用 Python 3\npython -m http.server 8000\n\n# 或使用 Node.js\nnpx http-server</code></pre>' +
-                            '<p>然后访问 <code>http://localhost:8000/help.html</code></p>' +
-                            '</div>';
-                        console.error('加载文档失败:', error);
+            
+            // 尝试多个可能的路径
+            const basePath = getBasePath();
+            const possiblePaths = [
+                basePath + 'README.md',  // 相对路径（基于当前目录）
+                './README.md',           // 当前目录
+                'README.md',             // 直接文件名
+                '/README.md'             // 绝对路径（根目录）
+            ];
+            
+            console.log('📂 当前路径:', window.location.pathname);
+            console.log('📂 基础路径:', basePath);
+            console.log('📂 尝试路径:', possiblePaths);
+            
+            // 尝试多个路径加载 README.md
+            for (const readmePath of possiblePaths) {
+                // 方式1: 尝试使用 fetch（优先，适用于 HTTP 服务器）
+                try {
+                    const response = await fetch(readmePath);
+                    if (response.ok) {
+                        markdownText = await response.text();
+                        console.log(`✅ 使用 fetch 成功加载 README.md (路径: ${readmePath})`);
+                        break; // 成功加载，退出循环
+                    } else {
+                        console.warn(`⚠️ 路径 ${readmePath} 返回状态码: ${response.status}`);
+                    }
+                } catch (fetchError) {
+                    console.warn(`⚠️ 路径 ${readmePath} fetch 加载失败:`, fetchError);
+                    lastError = fetchError;
+                }
+            }
+            
+            // 如果 fetch 都失败了，尝试使用 XMLHttpRequest
+            if (!markdownText) {
+                for (const readmePath of possiblePaths) {
+                    try {
+                        markdownText = await new Promise((resolve, reject) => {
+                            const xhr = new XMLHttpRequest();
+                            xhr.open('GET', readmePath, true);
+                        xhr.onreadystatechange = function() {
+                            if (xhr.readyState === 4) {
+                                if (xhr.status === 200 || (xhr.status === 0 && xhr.responseText)) {
+                                    resolve(xhr.responseText);
+                                } else {
+                                    reject(new Error(`XMLHttpRequest failed with status: ${xhr.status}`));
+                                }
+                            }
+                        };
+                        xhr.onerror = function() {
+                            reject(new Error('XMLHttpRequest network error'));
+                        };
+                        xhr.send();
                     });
-            };
-            xhr.send();
+                    console.log('✅ 使用 XMLHttpRequest 成功加载 README.md');
+                } catch (xhrError) {
+                    console.warn('⚠️ XMLHttpRequest 加载失败:', xhrError);
+                    lastError = xhrError;
+                }
+            }
+            
+            // 如果成功加载，渲染 Markdown
+            if (markdownText) {
+                try {
+                    const html = marked.parse(markdownText);
+                    helpContent.innerHTML = html;
+                    console.log('✅ Markdown 渲染成功');
+                } catch (parseError) {
+                    console.error('❌ Markdown 解析失败:', parseError);
+                    showError('Markdown 解析失败: ' + parseError.message);
+                }
+            } else {
+                // 显示错误信息
+                showError(lastError);
+            }
+        }
+        
+        function showError(error) {
+            const helpContent = document.getElementById('helpContent');
+            const isLocalFile = window.location.protocol === 'file:';
+            
+            let errorHtml = '<div style="color: #dc3545; padding: 20px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #dc3545;">';
+            errorHtml += '<h3 style="color: #dc3545; margin-top: 0;">⚠️ 加载文档失败</h3>';
+            
+            if (isLocalFile) {
+                errorHtml += '<p><strong>检测到您正在通过本地文件系统访问（file://），这会导致无法加载 README.md 文件。</strong></p>';
+                errorHtml += '<p>请通过 HTTP 服务器运行：</p>';
+                errorHtml += '<div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin: 15px 0;">';
+                errorHtml += '<p><strong>方式1：使用 Python</strong></p>';
+                errorHtml += '<pre style="background: #fff; padding: 10px; border-radius: 4px; overflow-x: auto;"><code>python3 -m http.server 8000</code></pre>';
+                errorHtml += '<p><strong>方式2：使用 Node.js</strong></p>';
+                errorHtml += '<pre style="background: #fff; padding: 10px; border-radius: 4px; overflow-x: auto;"><code>npx http-server</code></pre>';
+                errorHtml += '<p><strong>方式3：使用项目提供的脚本</strong></p>';
+                errorHtml += '<pre style="background: #fff; padding: 10px; border-radius: 4px; overflow-x: auto;"><code>chmod +x start.sh\n./start.sh</code></pre>';
+                errorHtml += '</div>';
+                errorHtml += '<p>然后在浏览器中访问：<code>http://localhost:8000/help.html</code></p>';
+            } else {
+                errorHtml += '<p>请确保 <code>README.md</code> 文件与 <code>help.html</code> 在同一目录下。</p>';
+                errorHtml += '<p>如果问题持续，请检查：</p>';
+                errorHtml += '<ul>';
+                errorHtml += '<li>文件是否存在</li>';
+                errorHtml += '<li>文件权限是否正确</li>';
+                errorHtml += '<li>服务器配置是否正确</li>';
+                errorHtml += '</ul>';
+            }
+            
+            if (error && error.message) {
+                errorHtml += '<details style="margin-top: 15px;">';
+                errorHtml += '<summary style="cursor: pointer; color: #666;">查看错误详情</summary>';
+                errorHtml += '<pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin-top: 10px; overflow-x: auto; font-size: 0.9em;">' + 
+                    escapeHtml(error.message) + '</pre>';
+                errorHtml += '</details>';
+            }
+            
+            errorHtml += '</div>';
+            helpContent.innerHTML = errorHtml;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         // 页面加载完成后执行

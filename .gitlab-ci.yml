@@ -8,7 +8,9 @@ pages:
     - mkdir -p public  # 确保 public 目录存在（避免无文件时目录不存在导致失败）
     # 复制静态资源到 public 目录（根据你的实际文件路径调整通配符）
     # 说明：*.html 匹配根目录所有 HTML 文件，images/ 复制整个图片文件夹
-    - cp -r *.html *.css *.js images/ public/ || true  # 加 || true 避免某类文件不存在时脚本报错
+    - cp -r *.html *.css *.js *.md *.svg *.sh public/ || true  # 加 || true 避免某类文件不存在时脚本报错
+    # 确保 README.md 被复制（help.html 需要它）
+    - cp README.md public/ 2>/dev/null || true
   artifacts:
     paths:
       - public  # 必须指定 public 目录为产物（GitLab Pages 仅读取此目录资源）

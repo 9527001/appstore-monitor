@@ -19,22 +19,6 @@
             <p class="subtitle">实时监控应用在 App Store 的上线状态</p>
         </header>
 
-        <!-- CORS 提示 -->
-        <div id="corsWarning" class="cors-warning" style="display: none;">
-            <div class="cors-warning-content">
-                <strong>⚠️ 重要提示：</strong>
-                <p>检测到您正在通过本地文件系统访问（file://），这会导致 CORS 跨域问题。</p>
-                <p><strong>请通过 HTTP 服务器运行：</strong></p>
-                <div class="cors-warning-commands">
-                    <code>python3 -m http.server 8000</code>
-                    <span>或</span>
-                    <code>npx http-server</code>
-                </div>
-                <p>然后访问 <code>http://localhost:8000</code></p>
-                <button onclick="document.getElementById('corsWarning').style.display='none'" class="btn btn-outline">我知道了</button>
-            </div>
-        </div>
-
         <!-- 应用信息卡片 -->
         <div class="app-info-panel" id="appInfoPanel" style="display: none;">
             <div class="app-info-card" id="appInfoCard">
