@@ -110,6 +110,22 @@
             padding: 40px;
             color: #666;
         }
+        .last-update-info {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+        }
+        .update-label {
+            color: #999;
+            margin-right: 8px;
+        }
+        .update-time {
+            color: #667eea;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
@@ -120,6 +136,10 @@
         </div>
         <div id="helpContent" class="help-content">
             <div class="loading">正在加载文档...</div>
+        </div>
+        <div id="lastUpdateInfo" class="last-update-info" style="display: none;">
+            <span class="update-label">📅 文档最后更新：</span>
+            <span id="lastUpdateTime" class="update-time">-</span>
         </div>
     </div>
 
@@ -163,13 +183,22 @@
             console.log('📂 尝试路径:', possiblePaths);
             
             // 尝试多个路径加载 README.md
+            let lastModified = null;
             for (const readmePath of possiblePaths) {
                 // 方式1: 尝试使用 fetch（优先，适用于 HTTP 服务器）
                 try {
                     const response = await fetch(readmePath);
                     if (response.ok) {
                         markdownText = await response.text();
+                        // 获取最后修改时间
+                        const lastModifiedHeader = response.headers.get('Last-Modified');
+                        if (lastModifiedHeader) {
+                            lastModified = new Date(lastModifiedHeader);
+                        }
                         console.log(`✅ 使用 fetch 成功加载 README.md (路径: ${readmePath})`);
+                        if (lastModified) {
+                            console.log(`📅 最后修改时间: ${lastModified.toLocaleString('zh-CN')}`);
+                        }
                         break; // 成功加载，退出循环
                     } else {
                         console.warn(`⚠️ 路径 ${readmePath} 返回状态码: ${response.status}`);
@@ -184,27 +213,49 @@
             if (!markdownText) {
                 for (const readmePath of possiblePaths) {
                     try {
-                        markdownText = await new Promise((resolve, reject) => {
+                        const result = await new Promise((resolve, reject) => {
                             const xhr = new XMLHttpRequest();
                             xhr.open('GET', readmePath, true);
-                        xhr.onreadystatechange = function() {
-                            if (xhr.readyState === 4) {
-                                if (xhr.status === 200 || (xhr.status === 0 && xhr.responseText)) {
-                                    resolve(xhr.responseText);
-                                } else {
-                                    reject(new Error(`XMLHttpRequest failed with status: ${xhr.status}`));
+                            xhr.onreadystatechange = function() {
+                                if (xhr.readyState === 4) {
+                                    if (xhr.status === 200 || (xhr.status === 0 && xhr.responseText)) {
+                                        // 尝试从响应头获取最后修改时间
+                                        let modifiedTime = null;
+                                        try {
+                                            const lastModifiedHeader = xhr.getResponseHeader('Last-Modified');
+                                            if (lastModifiedHeader) {
+                                                modifiedTime = new Date(lastModifiedHeader);
+                                            }
+                                        } catch (e) {
+                                            console.warn('无法获取最后修改时间:', e);
+                                        }
+                                        resolve({
+                                            text: xhr.responseText,
+                                            lastModified: modifiedTime
+                                        });
+                                    } else {
+                                        reject(new Error(`XMLHttpRequest failed with status: ${xhr.status}`));
+                                    }
                                 }
-                            }
-                        };
-                        xhr.onerror = function() {
-                            reject(new Error('XMLHttpRequest network error'));
-                        };
-                        xhr.send();
-                    });
-                    console.log('✅ 使用 XMLHttpRequest 成功加载 README.md');
-                } catch (xhrError) {
-                    console.warn('⚠️ XMLHttpRequest 加载失败:', xhrError);
-                    lastError = xhrError;
+                            };
+                            xhr.onerror = function() {
+                                reject(new Error('XMLHttpRequest network error'));
+                            };
+                            xhr.send();
+                        });
+                        markdownText = result.text;
+                        if (result.lastModified && !lastModified) {
+                            lastModified = result.lastModified;
+                        }
+                        console.log(`✅ 使用 XMLHttpRequest 成功加载 README.md (路径: ${readmePath})`);
+                        if (lastModified) {
+                            console.log(`📅 最后修改时间: ${lastModified.toLocaleString('zh-CN')}`);
+                        }
+                        break; // 成功加载，退出循环
+                    } catch (xhrError) {
+                        console.warn(`⚠️ 路径 ${readmePath} XMLHttpRequest 加载失败:`, xhrError);
+                        lastError = xhrError;
+                    }
                 }
             }
             
@@ -214,6 +265,9 @@
                     const html = marked.parse(markdownText);
                     helpContent.innerHTML = html;
                     console.log('✅ Markdown 渲染成功');
+                    
+                    // 显示最后更新时间
+                    updateLastModifiedTime(lastModified);
                 } catch (parseError) {
                     console.error('❌ Markdown 解析失败:', parseError);
                     showError('Markdown 解析失败: ' + parseError.message);
@@ -269,6 +323,42 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+        
+        function updateLastModifiedTime(lastModified) {
+            const lastUpdateInfo = document.getElementById('lastUpdateInfo');
+            const lastUpdateTime = document.getElementById('lastUpdateTime');
+            
+            if (lastUpdateInfo && lastUpdateTime) {
+                if (lastModified) {
+                    // 格式化时间显示
+                    const formattedTime = lastModified.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                    });
+                    lastUpdateTime.textContent = formattedTime;
+                    lastUpdateInfo.style.display = 'block';
+                } else {
+                    // 如果没有获取到时间，显示当前时间作为备选
+                    const now = new Date();
+                    const formattedTime = now.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                    });
+                    lastUpdateTime.textContent = formattedTime + ' (当前时间)';
+                    lastUpdateInfo.style.display = 'block';
+                }
+            }
         }
 
         // 页面加载完成后执行
