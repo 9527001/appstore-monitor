@@ -1,19 +1,21 @@
-# The Docker image that will be used to build your app
-image: node:lts
-create-pages:
-  pages:
-    # The folder that contains the files to be exposed at the Page URL
-    stage: deploy
-    script:
-        # 将静态文件复制到 public 目录（根据实际文件路径调整）
-        - mkdir -p public  # 确保 public 目录存在
-        - cp -r *.html *.css *.js images/ public/  # 复制所有静态资源
-    artifacts:
-        paths:
-         - public  
-    rules:
-        # This ensures that only pushes to the default branch will trigger
-        # a pages deploy
-        - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
-  # Functions that should be executed before the build script is run
+# 可选：使用轻量镜像（纯静态复制无需 Node，推荐 alpine 镜像减小体积）
+image: alpine:latest  # alpine 是极小的 Linux 镜像，仅几 MB，加载更快
 
+# 核心：Pages 作业必须是顶级键，名称固定为 "pages"（GitLab 仅识别此名称触发 Pages 部署）
+pages:
+  stage: deploy  # 作业阶段：部署阶段（固定，与 CI 流水线阶段匹配）
+  script:
+    - mkdir -p public  # 确保 public 目录存在（避免无文件时目录不存在导致失败）
+    # 复制静态资源到 public 目录（根据你的实际文件路径调整通配符）
+    # 说明：*.html 匹配根目录所有 HTML 文件，images/ 复制整个图片文件夹
+    - cp -r *.html *.css *.js images/ public/ || true  # 加 || true 避免某类文件不存在时脚本报错
+  artifacts:
+    paths:
+      - public  # 必须指定 public 目录为产物（GitLab Pages 仅读取此目录资源）
+    expire_in: 1 week  # 可选：设置产物过期时间（节省存储，默认永久）
+  rules:
+    # 仅默认分支（如 main/master）的推送触发 Pages 部署
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+  before_script:
+    # 可选：若需要额外依赖（如 wget/curl），可在此安装（alpine 需用 apk 包管理）
+    # - apk add --no-cache wget  # 示例：安装 wget（当前场景无需，可删除）
