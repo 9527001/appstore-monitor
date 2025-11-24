@@ -12,6 +12,8 @@ class AppStoreMonitor {
         this.initElements();
         this.bindEvents();
         this.loadFromStorage();
+        // 检测是否是本地文件系统访问，如果是则显示 CORS 警告
+        this.checkCorsWarning();
         // 页面加载后自动查询当前版本信息
         this.autoLoadCurrentVersion();
     }
@@ -40,6 +42,7 @@ class AppStoreMonitor {
             appName: document.getElementById('appName'),
             appVersion: document.getElementById('appVersion'),
             appStoreLink: document.getElementById('appStoreLink'),
+            corsWarning: document.getElementById('corsWarning'),
         };
     }
 
@@ -73,6 +76,16 @@ class AppStoreMonitor {
         }
     }
 
+    checkCorsWarning() {
+        // 检测是否是本地文件系统访问（file:// 协议）
+        if (window.location.protocol === 'file:') {
+            console.warn('⚠️ 检测到本地文件系统访问，可能会遇到 CORS 问题');
+            if (this.elements.corsWarning) {
+                this.elements.corsWarning.style.display = 'block';
+            }
+        }
+    }
+
     async checkAppStore() {
         const appId = this.elements.appId.value.trim();
         const country = this.elements.country.value;
@@ -86,9 +99,93 @@ class AppStoreMonitor {
         }
 
         try {
-            const url = `https://itunes.apple.com/cn/lookup?id=${appId}&country=us&entity=software`;
-            const response = await fetch(url);
-            const data = await response.json();
+            // 使用 CORS 代理解决跨域问题
+            const apiUrl = `https://itunes.apple.com/lookup?id=${appId}&country=${country}&entity=software`;
+            
+            // 多个代理服务备选方案
+            const proxyServices = [
+                {
+                    name: 'allorigins.win',
+                    url: `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`,
+                    parser: (proxyData) => {
+                        if (proxyData.contents) {
+                            return JSON.parse(proxyData.contents);
+                        }
+                        return proxyData;
+                    }
+                },
+                {
+                    name: 'corsproxy.io',
+                    url: `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`,
+                    parser: (proxyData) => proxyData
+                },
+                {
+                    name: 'codetabs.com',
+                    url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(apiUrl)}`,
+                    parser: (proxyData) => proxyData
+                }
+            ];
+            
+            let data = null;
+            let lastError = null;
+            
+            // 尝试每个代理服务
+            for (const proxy of proxyServices) {
+                try {
+                    console.log(`🌐 尝试使用代理服务: ${proxy.name}`);
+                    const response = await fetch(proxy.url, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const proxyData = await response.json();
+                    data = proxy.parser(proxyData);
+                    
+                    // 验证数据格式
+                    if (data && typeof data === 'object' && 'resultCount' in data) {
+                        console.log(`✅ 代理服务 ${proxy.name} 成功`);
+                        break;
+                    } else {
+                        throw new Error('无效的响应格式');
+                    }
+                } catch (error) {
+                    console.warn(`⚠️ 代理服务 ${proxy.name} 失败:`, error.message);
+                    lastError = error;
+                    continue;
+                }
+            }
+            
+            // 如果所有代理都失败，尝试直接访问（可能会失败，但至少给用户一个提示）
+            if (!data) {
+                console.warn('⚠️ 所有代理服务都失败，尝试直接访问...');
+                try {
+                    const response = await fetch(apiUrl);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    data = await response.json();
+                } catch (directError) {
+                    throw new Error(
+                        `所有代理服务都失败，且直接访问被 CORS 阻止。\n` +
+                        `最后错误: ${lastError?.message || '未知错误'}\n\n` +
+                        `建议：\n` +
+                        `1. 通过 HTTP 服务器运行（如：python -m http.server 8000）\n` +
+                        `2. 或使用支持 CORS 的浏览器扩展\n` +
+                        `3. 或部署到支持 CORS 的服务器`
+                    );
+                }
+            }
+            
+            // 检查数据格式
+            if (!data || typeof data !== 'object') {
+                throw new Error('无效的 API 响应格式');
+            }
 
             const result = {
                 timestamp: new Date(),
@@ -115,7 +212,13 @@ class AppStoreMonitor {
 
             return result;
         } catch (error) {
-            console.error('查询失败:', error);
+            console.error('❌ 查询失败:', error);
+            
+            // 如果是自动加载，不显示错误提示
+            if (!this._isAutoLoad) {
+                alert(`查询失败: ${error.message}\n\n可能的原因：\n1. 网络连接问题\n2. CORS 代理服务不可用\n3. 应用ID不存在`);
+            }
+            
             const errorResult = {
                 timestamp: new Date(),
                 appId: appId,
@@ -123,7 +226,12 @@ class AppStoreMonitor {
                 isAvailable: false,
                 error: error.message,
             };
-            this.addResult(errorResult);
+            
+            // 自动加载时，不添加到结果列表
+            if (!this._isAutoLoad) {
+                this.addResult(errorResult);
+            }
+            
             return errorResult;
         }
     }
