@@ -109,7 +109,11 @@ class AppStoreMonitor {
                     url: `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`,
                     parser: (proxyData) => {
                         if (proxyData.contents) {
-                            return JSON.parse(proxyData.contents);
+                            try {
+                                return JSON.parse(proxyData.contents);
+                            } catch (e) {
+                                throw new Error(`解析 allorigins.win 响应失败: ${e.message}`);
+                            }
                         }
                         return proxyData;
                     }
@@ -123,6 +127,11 @@ class AppStoreMonitor {
                     name: 'codetabs.com',
                     url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(apiUrl)}`,
                     parser: (proxyData) => proxyData
+                },
+                {
+                    name: 'thingproxy.freeboard.io',
+                    url: `https://thingproxy.freeboard.io/fetch/${apiUrl}`,
+                    parser: (proxyData) => proxyData
                 }
             ];
             
@@ -133,12 +142,20 @@ class AppStoreMonitor {
             for (const proxy of proxyServices) {
                 try {
                     console.log(`🌐 尝试使用代理服务: ${proxy.name}`);
+                    
+                    // 设置超时（10秒）
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000);
+                    
                     const response = await fetch(proxy.url, {
                         method: 'GET',
                         headers: {
                             'Accept': 'application/json',
-                        }
+                        },
+                        signal: controller.signal
                     });
+                    
+                    clearTimeout(timeoutId);
                     
                     if (!response.ok) {
                         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -152,34 +169,36 @@ class AppStoreMonitor {
                         console.log(`✅ 代理服务 ${proxy.name} 成功`);
                         break;
                     } else {
-                        throw new Error('无效的响应格式');
+                        throw new Error('无效的响应格式：缺少 resultCount 字段');
                     }
                 } catch (error) {
-                    console.warn(`⚠️ 代理服务 ${proxy.name} 失败:`, error.message);
-                    lastError = error;
+                    if (error.name === 'AbortError') {
+                        console.warn(`⚠️ 代理服务 ${proxy.name} 超时（10秒）`);
+                        lastError = new Error('请求超时');
+                    } else {
+                        console.warn(`⚠️ 代理服务 ${proxy.name} 失败:`, error.message);
+                        lastError = error;
+                    }
                     continue;
                 }
             }
             
-            // 如果所有代理都失败，尝试直接访问（可能会失败，但至少给用户一个提示）
+            // 如果所有代理都失败，抛出明确的错误（不要尝试直接访问，会触发 CORS 错误）
             if (!data) {
-                console.warn('⚠️ 所有代理服务都失败，尝试直接访问...');
-                try {
-                    const response = await fetch(apiUrl);
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-                    data = await response.json();
-                } catch (directError) {
-                    throw new Error(
-                        `所有代理服务都失败，且直接访问被 CORS 阻止。\n` +
-                        `最后错误: ${lastError?.message || '未知错误'}\n\n` +
-                        `建议：\n` +
-                        `1. 通过 HTTP 服务器运行（如：python -m http.server 8000）\n` +
-                        `2. 或使用支持 CORS 的浏览器扩展\n` +
-                        `3. 或部署到支持 CORS 的服务器`
-                    );
-                }
+                const failedProxies = proxyServices.map(p => `- ${p.name}`).join('\n');
+                throw new Error(
+                    `所有 CORS 代理服务都失败，无法访问 iTunes API。\n\n` +
+                    `尝试的代理服务：\n${failedProxies}\n\n` +
+                    `最后错误: ${lastError?.message || '未知错误'}\n\n` +
+                    `可能的原因：\n` +
+                    `1. 网络连接问题\n` +
+                    `2. 代理服务暂时不可用\n` +
+                    `3. 浏览器安全策略限制\n\n` +
+                    `建议：\n` +
+                    `1. 检查网络连接后重试\n` +
+                    `2. 稍后重试（代理服务可能暂时不可用）\n` +
+                    `3. 如果问题持续，考虑使用服务器端代理或部署到支持 CORS 的服务器`
+                );
             }
             
             // 检查数据格式
