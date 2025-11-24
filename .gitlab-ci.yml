@@ -1,10 +1,19 @@
-image: registry.gitlab.com/pages/hugo:latest  # Hugo 官方镜像
-pages:
-  stage: deploy
-  script:
-    - hugo  # 生成静态文件到 public 目录
-  artifacts:
-    paths:
-      - public
-  rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+# The Docker image that will be used to build your app
+image: node:lts
+create-pages:
+  pages:
+    # The folder that contains the files to be exposed at the Page URL
+    stage: deploy
+    script:
+        # 将静态文件复制到 public 目录（根据实际文件路径调整）
+        - mkdir -p public  # 确保 public 目录存在
+        - cp -r *.html *.css *.js images/ public/  # 复制所有静态资源
+    artifacts:
+        paths:
+         - public  
+    rules:
+        # This ensures that only pushes to the default branch will trigger
+        # a pages deploy
+        - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+  # Functions that should be executed before the build script is run
+
