@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="App Store 应用上线监控工具 - 使用文档">
+    <title>使用文档 - App Store 应用上线监控</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .help-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+        .help-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #667eea;
+        }
+        .help-header h1 {
+            color: #333;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        .help-header .back-link {
+            display: inline-block;
+            margin-top: 15px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 8px 16px;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            transition: all 0.3s;
+        }
+        .help-header .back-link:hover {
+            background: #667eea;
+            color: white;
+        }
+        .help-content {
+            line-height: 1.8;
+            color: #333;
+        }
+        .help-content h2 {
+            color: #667eea;
+            font-size: 1.5em;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .help-content h3 {
+            color: #555;
+            font-size: 1.2em;
+            margin-top: 25px;
+            margin-bottom: 12px;
+        }
+        .help-content ul, .help-content ol {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+        .help-content li {
+            margin-bottom: 8px;
+        }
+        .help-content code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #d63384;
+        }
+        .help-content pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border-left: 4px solid #667eea;
+            margin: 15px 0;
+        }
+        .help-content pre code {
+            background: none;
+            padding: 0;
+            color: #333;
+        }
+        .help-content p {
+            margin-bottom: 15px;
+        }
+        .help-content blockquote {
+            border-left: 4px solid #667eea;
+            padding-left: 15px;
+            margin-left: 0;
+            color: #666;
+            font-style: italic;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="help-container">
+        <div class="help-header">
+            <h1>📖 使用文档</h1>
+            <a href="index.html" class="back-link">← 返回首页</a>
+        </div>
+        <div id="helpContent" class="help-content">
+            <div class="loading">正在加载文档...</div>
+        </div>
+    </div>
+
+    <script>
+        // 加载并渲染 README.md
+        function loadReadme() {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', 'README.md', true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200 || xhr.status === 0) {
+                        // 使用 marked.js 将 markdown 转换为 HTML
+                        const html = marked.parse(xhr.responseText);
+                        document.getElementById('helpContent').innerHTML = html;
+                    } else {
+                        // 尝试使用 fetch（适用于服务器环境）
+                        fetch('README.md')
+                            .then(response => {
+                                if (!response.ok) throw new Error('Network response was not ok');
+                                return response.text();
+                            })
+                            .then(text => {
+                                const html = marked.parse(text);
+                                document.getElementById('helpContent').innerHTML = html;
+                            })
+                            .catch(error => {
+                                document.getElementById('helpContent').innerHTML = 
+                                    '<div style="color: #dc3545; padding: 20px;">' +
+                                    '<h3>加载文档失败</h3>' +
+                                    '<p>请确保 README.md 文件与 help.html 在同一目录下。</p>' +
+                                    '<p>如果是在本地打开，建议使用本地服务器运行（如使用 Python: <code>python -m http.server</code>）</p>' +
+                                    '</div>';
+                                console.error('加载文档失败:', error);
+                            });
+                    }
+                }
+            };
+            xhr.onerror = function() {
+                // 如果 XMLHttpRequest 失败，尝试使用 fetch
+                fetch('README.md')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.text();
+                    })
+                    .then(text => {
+                        const html = marked.parse(text);
+                        document.getElementById('helpContent').innerHTML = html;
+                    })
+                    .catch(error => {
+                        document.getElementById('helpContent').innerHTML = 
+                            '<div style="color: #dc3545; padding: 20px;">' +
+                            '<h3>加载文档失败</h3>' +
+                            '<p>请确保 README.md 文件与 help.html 在同一目录下。</p>' +
+                            '<p>如果是在本地打开，建议使用本地服务器运行：</p>' +
+                            '<pre><code># 使用 Python 3\npython -m http.server 8000\n\n# 或使用 Node.js\nnpx http-server</code></pre>' +
+                            '<p>然后访问 <code>http://localhost:8000/help.html</code></p>' +
+                            '</div>';
+                        console.error('加载文档失败:', error);
+                    });
+            };
+            xhr.send();
+        }
+
+        // 页面加载完成后执行
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadReadme);
+        } else {
+            loadReadme();
+        }
+    </script>
+</body>
+</html>
+
