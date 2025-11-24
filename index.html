@@ -17,6 +17,23 @@
             <p class="subtitle">实时监控应用在 App Store 的上线状态</p>
         </header>
 
+        <!-- 应用信息卡片 -->
+        <div class="app-info-panel" id="appInfoPanel" style="display: none;">
+            <div class="app-info-card" id="appInfoCard">
+                <div class="app-info-content">
+                    <img id="appIcon" src="" alt="应用图标" class="app-icon" onerror="this.style.display='none'">
+                    <div class="app-info-details">
+                        <h3 id="appName" class="app-name">-</h3>
+                        <p id="appVersion" class="app-version">版本: -</p>
+                    </div>
+                </div>
+                <a id="appStoreLink" href="#" target="_blank" class="app-store-link">
+                    <span>前往 App Store</span>
+                    <span>→</span>
+                </a>
+            </div>
+        </div>
+
         <!-- 目标查询结果 - 突出显示 -->
         <div class="version-panel highlight-panel">
             <h2>🎯 目标版本查询结果</h2>

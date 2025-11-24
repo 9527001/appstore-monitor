@@ -65,6 +65,84 @@ header h1 {
     opacity: 0.9;
 }
 
+/* 应用信息卡片 */
+.app-info-panel {
+    margin-bottom: 20px;
+}
+
+.app-info-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s;
+    border: 2px solid transparent;
+}
+
+.app-info-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    border-color: #667eea;
+}
+
+.app-info-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
+}
+
+.app-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    object-fit: cover;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.app-info-details {
+    flex: 1;
+}
+
+.app-name {
+    font-size: 1.3em;
+    font-weight: 700;
+    color: #333;
+    margin: 0 0 5px 0;
+}
+
+.app-version {
+    font-size: 0.95em;
+    color: #666;
+    margin: 0;
+}
+
+.app-store-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s;
+    white-space: nowrap;
+}
+
+.app-store-link:hover {
+    transform: translateX(3px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.app-store-link span:last-child {
+    font-size: 1.2em;
+}
+
 .version-panel,
 .config-panel,
 .status-panel,
@@ -170,6 +248,84 @@ header h1 {
 .version-secondary-value {
     font-weight: 600;
     color: rgba(255, 255, 255, 0.85);
+}
+
+/* 应用信息卡片 */
+.app-info-panel {
+    margin-bottom: 20px;
+}
+
+.app-info-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s;
+    border: 2px solid transparent;
+}
+
+.app-info-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    border-color: #667eea;
+}
+
+.app-info-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
+}
+
+.app-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    object-fit: cover;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.app-info-details {
+    flex: 1;
+}
+
+.app-name {
+    font-size: 1.3em;
+    font-weight: 700;
+    color: #333;
+    margin: 0 0 5px 0;
+}
+
+.app-version {
+    font-size: 0.95em;
+    color: #666;
+    margin: 0;
+}
+
+.app-store-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s;
+    white-space: nowrap;
+}
+
+.app-store-link:hover {
+    transform: translateX(3px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.app-store-link span:last-child {
+    font-size: 1.2em;
 }
 
 /* 保留旧的样式类以兼容 */
@@ -657,6 +813,22 @@ header h1 {
 
     .version-box {
         padding: 20px;
+    }
+
+    .app-info-card {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+
+    .app-info-content {
+        justify-content: center;
+        text-align: center;
+    }
+
+    .app-store-link {
+        width: 100%;
+        justify-content: center;
     }
 }
 

@@ -34,6 +34,12 @@ class AppStoreMonitor {
             currentVersion: document.getElementById('currentVersion'),
             targetVersionDisplay: document.getElementById('targetVersionDisplay'),
             targetVersionStatus: document.getElementById('targetVersionStatus'),
+            appInfoPanel: document.getElementById('appInfoPanel'),
+            appInfoCard: document.getElementById('appInfoCard'),
+            appIcon: document.getElementById('appIcon'),
+            appName: document.getElementById('appName'),
+            appVersion: document.getElementById('appVersion'),
+            appStoreLink: document.getElementById('appStoreLink'),
         };
     }
 
@@ -345,6 +351,9 @@ class AppStoreMonitor {
     }
 
     updateVersionInfo(result) {
+        // 更新应用信息卡片
+        this.updateAppInfoCard(result);
+        
         // 更新当前版本
         if (result.isAvailable && result.appInfo && result.appInfo.version) {
             this.elements.currentVersion.textContent = result.appInfo.version;
@@ -418,6 +427,47 @@ class AppStoreMonitor {
             const numPart = part.match(/^\d+/);
             return numPart ? parseInt(numPart[0], 10) : 0;
         });
+    }
+
+    updateAppInfoCard(result) {
+        if (result.isAvailable && result.appInfo) {
+            const appInfo = result.appInfo;
+            
+            // 显示应用信息卡片
+            this.elements.appInfoPanel.style.display = 'block';
+            
+            // 更新应用图标
+            if (appInfo.artworkUrl100 || appInfo.artworkUrl512) {
+                const iconUrl = appInfo.artworkUrl512 || appInfo.artworkUrl100;
+                this.elements.appIcon.src = iconUrl;
+                this.elements.appIcon.style.display = 'block';
+            } else {
+                this.elements.appIcon.style.display = 'none';
+            }
+            
+            // 更新应用名称
+            this.elements.appName.textContent = appInfo.trackName || '-';
+            
+            // 更新版本信息
+            if (appInfo.version) {
+                this.elements.appVersion.textContent = `版本: ${appInfo.version}`;
+            } else {
+                this.elements.appVersion.textContent = '版本: -';
+            }
+            
+            // 更新商店链接
+            if (appInfo.trackViewUrl) {
+                this.elements.appStoreLink.href = appInfo.trackViewUrl;
+            } else {
+                // 如果没有链接，根据 appId 构建链接
+                const appId = result.appId;
+                const country = result.country || 'cn';
+                this.elements.appStoreLink.href = `https://apps.apple.com/${country}/app/id${appId}`;
+            }
+        } else {
+            // 隐藏应用信息卡片
+            this.elements.appInfoPanel.style.display = 'none';
+        }
     }
 
     async sendWebhook(result, targetVersion, currentVersion) {
