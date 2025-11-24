@@ -12,6 +12,8 @@ class AppStoreMonitor {
         this.initElements();
         this.bindEvents();
         this.loadFromStorage();
+        // 页面加载后自动查询当前版本信息
+        this.autoLoadCurrentVersion();
     }
 
     initElements() {
@@ -81,9 +83,13 @@ class AppStoreMonitor {
             this.addResult(result);
             this.updateStatus(result);
             this.updateVersionInfo(result);
-            this.queryCount++;
-            this.elements.queryCount.textContent = this.queryCount;
-            this.saveToStorage();
+            
+            // 如果是自动加载的查询，不增加查询次数和不保存
+            if (!this._isAutoLoad) {
+                this.queryCount++;
+                this.elements.queryCount.textContent = this.queryCount;
+                this.saveToStorage();
+            }
 
             return result;
         } catch (error) {
@@ -197,8 +203,11 @@ class AppStoreMonitor {
     }
 
     addResult(result) {
-        this.results.unshift(result); // 最新的在前面
-        this.renderResults();
+        // 如果是自动加载，不添加到历史记录
+        if (!this._isAutoLoad) {
+            this.results.unshift(result); // 最新的在前面
+            this.renderResults();
+        }
     }
 
     renderResults() {
@@ -528,6 +537,51 @@ class AppStoreMonitor {
         } catch (error) {
             console.error('加载数据失败:', error);
         }
+    }
+
+    async autoLoadCurrentVersion() {
+        // 延迟执行，确保页面完全加载
+        setTimeout(async () => {
+            const appId = this.elements.appId.value.trim();
+            if (!appId) {
+                return; // 没有应用ID，不执行查询
+            }
+
+            // 如果已经有查询结果且目标版本号已设置，不自动查询
+            if (this.results.length > 0 && this.elements.targetVersion.value.trim()) {
+                // 但还是要更新版本信息显示
+                this.updateVersionInfo(this.results[0]);
+                return;
+            }
+
+            try {
+                // 标记为自动加载，不增加查询次数
+                this._isAutoLoad = true;
+                
+                // 执行一次查询获取当前版本
+                const result = await this.checkAppStore();
+                
+                // 如果查询成功且有版本信息，且目标版本号为空，则设置为当前版本
+                if (result && result.isAvailable && result.appInfo && result.appInfo.version) {
+                    const currentVersion = result.appInfo.version;
+                    
+                    // 如果目标版本号为空，设置为当前版本
+                    if (!this.elements.targetVersion.value.trim()) {
+                        this.elements.targetVersion.value = currentVersion;
+                        this.saveToStorage();
+                    }
+                    
+                    // 更新版本信息显示
+                    this.updateVersionInfo(result);
+                }
+                
+                // 重置标记
+                this._isAutoLoad = false;
+            } catch (error) {
+                console.error('自动加载当前版本失败:', error);
+                this._isAutoLoad = false;
+            }
+        }, 500); // 延迟500ms执行
     }
 }
 
